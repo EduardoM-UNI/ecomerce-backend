@@ -2,17 +2,23 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/users/user.entity';
 import { Repository } from 'typeorm';
-import { RegisterUserDto } from './dto/register-user.dto';
+import { RegisterAuthDto } from './dto/register-auth.dto';
+import { LoginAuthDto } from './dto/login-auth.dto';
+import { compare } from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
 
-    constructor(@InjectRepository(User) private userRepository: Repository<User>){}
+    constructor(@InjectRepository(User) private userRepository: Repository<User>,
+                private jwtService: JwtService
+){}
 
-    async register(user: RegisterUserDto){
+    async register(user: RegisterAuthDto){
 
-        const emailExist = await this.userRepository.findOneBy({email: user.email})
-        const phoneExist = await this.userRepository.findOneBy({phone: user.phone})
+        const {email, phone} = user;
+        const emailExist = await this.userRepository.findOneBy({email: email})
+        const phoneExist = await this.userRepository.findOneBy({phone: phone})
 
         if (emailExist){
             return new HttpException('The email is yet register', HttpStatus.CONFLICT);
@@ -24,6 +30,29 @@ export class AuthService {
 
         const newUser = this.userRepository.create(user);
         return this.userRepository.save(newUser);
+    }
+
+    async login(loginData:LoginAuthDto){
+
+        const {email, password} = loginData;
+        const userFound = await this.userRepository.findOneBy({email: email});
+
+        if (!userFound){
+            return new HttpException('The email not exist', HttpStatus.NOT_FOUND);
+        }
+
+        const isPasswordValid = await compare(password, userFound.password);
+        if(!isPasswordValid){
+            return new HttpException('Password Incorrect', HttpStatus.FORBIDDEN);
+        }
+        
+        const payload = { id: userFound.id, name: userFound.name};
+        const token = this.jwtService.sign(payload);
+        const data = {
+            user: userFound,
+            token: token
+        }
+        return data;
     }
 
 }

@@ -7,7 +7,7 @@ export class UsersController {
 
     constructor(private usersService: UsersService) {}
 
-
+    //Crea la tabla en la BD
     @Post() // Ruta http:localhost/users -> POST
     create(@Body() user: CreateUserDto) {
 
