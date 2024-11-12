@@ -25,4 +25,6 @@ export class RegisterAuthDto {
     password: string;
 
 
+    rolesIds: string[];
+
 }

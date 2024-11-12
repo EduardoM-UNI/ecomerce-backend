@@ -7,8 +7,8 @@ const uuid = uuidv4();
 
 
 const storage = new Storage({
-    projectId: "test-project-2799c",
-    keyFilename: './serviceAccountKey.json'
+    projectId: "test-project-2799c", // nombre del proyecto en firebase
+    keyFilename: './serviceAccountKey.json' // json que proporciona firebase storage
 });
 
 const bucket = storage.bucket("gs://test-project-2799c.firebasestorage.app/");

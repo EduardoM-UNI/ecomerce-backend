@@ -1,16 +1,20 @@
 import { Body, Controller, FileTypeValidator, Get, MaxFileSizeValidator, Param, ParseFilePipe, ParseIntPipe, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UsersService } from './users.service';
-import { JwtAuthGuard } from 'src/auth/auth/jwt-auth.guard';
+import { JwtAuthGuard } from 'src/auth/jwt/jwt-auth.guard';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { JwtRolesGuard } from 'src/auth/jwt/jwt-roles.guard';
+import { HasRoles } from 'src/auth/jwt/has-roles';
+import { JwtRole } from 'src/auth/jwt/jwt-role';
 
 @Controller('users')
 export class UsersController {
 
     constructor(private usersService: UsersService) {}
 
-    @UseGuards(JwtAuthGuard)
+    @HasRoles(JwtRole.ADMIN)
+    @UseGuards(JwtAuthGuard, JwtRolesGuard)
     @Get() // Ruta http:localhost/users -> Get
     findAll() {
         return this.usersService.findAll();
@@ -23,17 +27,18 @@ export class UsersController {
         return this.usersService.create(user);
     }
 
-    @UseGuards(JwtAuthGuard)
+    @HasRoles(JwtRole.CLIENT)
+    @UseGuards(JwtAuthGuard, JwtAuthGuard)
     @Put(':id') // Ruta http://192.168.1.33/users/:id -> PUT
     update(@Param('id', ParseIntPipe) id: number, @Body() user: UpdateUserDto) {
 
         return this.usersService.update(id, user);
     }
-
-    
-    @Post('upload')
+    @HasRoles(JwtRole.CLIENT)
+    @UseGuards(JwtAuthGuard, JwtAuthGuard)
+    @Post('upload/:id') // Validamos el tamaño y el tipo y subimos la imagen al servidor
     @UseInterceptors(FileInterceptor('file'))
-    uploadFile(
+    updateWithImage(
         @UploadedFile(
             new ParseFilePipe({
                 validators: [
@@ -41,9 +46,11 @@ export class UsersController {
                   new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
                 ],
               })
-        ) file: Express.Multer.File) {
-    console.log(file);
-    this.usersService.updateWithImage(file);
+        ) file: Express.Multer.File,
+        @Param('id', ParseIntPipe) id: number, 
+        @Body() user: UpdateUserDto
+    ) {
+    return this.usersService.updateWithImage(file, id, user); // Subimos la imagen al firebase-storage
 }
 
 
